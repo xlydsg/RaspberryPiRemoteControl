@@ -5,59 +5,63 @@ import numpy as np
 import pygame
 import serial
 
-window_W = 640
-window_L = 480
+window_W = 1024
+window_L = 768
 
 def run_control():
     pygame.init()
     camera = cv2.VideoCapture(1)
     screen = pygame.display.set_mode((window_W,window_L))
     pygame.display.set_caption("HDMICapture")
-    pygame.event.set_grab(True)
+    pygame.event.set_grab(False)
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit(0)
+
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     pygame.event.set_grab(not(pygame.event.get_grab()))
                 print('0x%x'%pygkey_to_code(event.key))
                 print(ch9329_kbencode(pygkey_to_code(event.key),pygkey_mod(event.mod)))
+
             elif event.type == pygame.KEYUP:
                 print("\x57\xAB\x00\x02\x08\x00\x00\x00\x00\x00\x00\x00\x00\x0C")
                 #ser.write("\x57\xAB\x00\x02\x08\x00\x00\x00\x00\x00\x00\x00\x00\x0C" )
+
             elif event.type == pygame.MOUSEMOTION:
-                print(event.rel[0]) 
-                print(event.rel[1])
-                if pygame.event.get_grab():
-                    pygame.mouse.set_pos(window_W/2,window_W/2)
+                print(event.pos[0]) 
+                print(event.pos[1])
+                #ch9329_msencode(event.pos[0],event.pos[1])
+                print(ch9329_msencode(event.pos[0],event.pos[1]))
+                # if pygame.event.get_grab():
+                #     pygame.mouse.set_pos(window_W/2,window_W/2)
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     print("You pressed the left mouse button")
                     print("\x57\xAB\x00\x05\x05\x01\x01\x00\x00\x00\x0E")
                 elif event.button == 2:
                     print("You pressed the middle mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x03\x00\x00\x00\x10")
+                    print("\x57\xAB\x00\x05\x05\x01\x04\x00\x00\x00\x11")
                 elif event.button == 3:
                     print("You pressed the right mouse button")
                     print("\x57\xAB\x00\x05\x05\x01\x02\x00\x00\x00\x0F")
                 elif event.button == 4:
                     print("You up")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0E") 
+                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x01\x0E") 
                 elif event.button == 5:
                     print("You down")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0E") 
+                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x81\x9C") 
             elif event.type == pygame.MOUSEBUTTONUP:
+                print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0D")
                 if event.button == 1:
                     print("You released the left mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0D")
                 elif event.button == 2:
                     print("You released the middle mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0D")
                 elif event.button == 3:
                     print("You released the right mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0D")
                 elif event.button == 4:
                     print("You up")
                 elif event.button == 5:
@@ -71,7 +75,23 @@ def run_control():
         pygame.display.flip()
 
 def ch9329_msencode(x,y):
-    return 0
+    # 
+    str_head = "\x57\xAB\x00\x04\x02\x00" 
+
+    x = int(x*4096/1280)
+    y = int(y*4096/768)
+
+    x_str1 = chr(x&0xff) 
+    x_str2 = chr((x>>8)&0xff)
+    y_str1 = chr(y&0xff) 
+    y_str2 = chr((y>>8)&0xff) 
+
+    str_tail = 0x57+0xAB+4+7+2+ int(y&0xff) +  int((y>>8)&0xff) + int(x&0xff) +  int((x>>8)&0xff)
+
+    str = str_head + x_str1 +x_str2 + y_str1 + y_str2 + '\x00' + chr(str_tail&0xff)
+
+    return str
+
 
 def ch9329_kbencode(keyvalue,modvalue):
     str_head = "\x57\xAB\x00\x02\x08" 
