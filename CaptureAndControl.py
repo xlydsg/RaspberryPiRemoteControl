@@ -1,14 +1,18 @@
 import sys
+
+import cv2
+import numpy as np
 import pygame
 import serial
 
-window_W = 100
-window_L = 100
+window_W = 640
+window_L = 480
 
-def run_capture():
+def run_control():
     pygame.init()
+    camera = cv2.VideoCapture(1)
     screen = pygame.display.set_mode((window_W,window_L))
-    pygame.display.set_caption("keycapture")
+    pygame.display.set_caption("HDMICapture")
     pygame.event.set_grab(True)
 
     while True:
@@ -59,8 +63,11 @@ def run_capture():
                 elif event.button == 5:
                     print("You down")
 
-
-
+        ret, frame = camera.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = frame.swapaxes(0,1)
+        frame = pygame.surfarray.make_surface(frame)
+        screen.blit(frame, (0,0))
         pygame.display.flip()
 
 def ch9329_msencode(x,y):
@@ -348,5 +355,4 @@ def pygkey_to_code(key):
 
     return key_map.get(keyvalue.get(key,0),0)
 
-run_capture()
-
+run_control()
