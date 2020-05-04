@@ -5,12 +5,13 @@ import numpy as np
 import pygame
 import serial
 
-window_W = 1024
-window_L = 768
-
+window_W = 1280
+window_L = 720
 def run_control():
     pygame.init()
-    camera = cv2.VideoCapture(1)
+    camera = cv2.VideoCapture(2)
+    camera.set(3,window_W)
+    camera.set(4,window_L)
     screen = pygame.display.set_mode((window_W,window_L))
     pygame.display.set_caption("HDMICapture")
     pygame.event.set_grab(False)
