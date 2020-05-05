@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*
 import sys
 
 import cv2
@@ -7,9 +8,10 @@ import serial
 
 window_W = 1280
 window_L = 720
-def run_control():
+
+def main():
     pygame.init()
-    camera = cv2.VideoCapture(2)
+    camera = cv2.VideoCapture(0)
     camera.set(3,window_W)
     camera.set(4,window_L)
     screen = pygame.display.set_mode((window_W,window_L))
@@ -25,38 +27,41 @@ def run_control():
                 if event.key == pygame.K_ESCAPE:
                     pygame.event.set_grab(not(pygame.event.get_grab()))
                 print('0x%x'%pygkey_to_code(event.key))
-                print(ch9329_kbencode(pygkey_to_code(event.key),pygkey_mod(event.mod)))
+                if event.key != pygame.K_LSHIFT:
+                    ser.write(bytes.fromhex(ch9329_kbencode(pygkey_to_code(event.key),0)))
 
             elif event.type == pygame.KEYUP:
-                print("\x57\xAB\x00\x02\x08\x00\x00\x00\x00\x00\x00\x00\x00\x0C")
-                #ser.write("\x57\xAB\x00\x02\x08\x00\x00\x00\x00\x00\x00\x00\x00\x0C" )
+                ser.write(bytes.fromhex("57AB00020800000000000000000C"))
+                #ser.write("57AB00020800000000000000000C" )
 
             elif event.type == pygame.MOUSEMOTION:
                 print(event.pos[0]) 
                 print(event.pos[1])
-                #ch9329_msencode(event.pos[0],event.pos[1])
-                print(ch9329_msencode(event.pos[0],event.pos[1]))
+                posstr = ch9329_msencode(event.pos[0],event.pos[1])
+                ser.write(bytes.fromhex(posstr))
+                print(posstr)
                 # if pygame.event.get_grab():
                 #     pygame.mouse.set_pos(window_W/2,window_W/2)
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     print("You pressed the left mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x01\x00\x00\x00\x0E")
+                    ser.write(bytes.fromhex("57ab00050501010000000E"))
                 elif event.button == 2:
                     print("You pressed the middle mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x04\x00\x00\x00\x11")
+                    ser.write(bytes.fromhex("57ab000505010400000011"))
                 elif event.button == 3:
                     print("You pressed the right mouse button")
-                    print("\x57\xAB\x00\x05\x05\x01\x02\x00\x00\x00\x0F")
+                    ser.write(bytes.fromhex("57ab00050501020000000f"))
                 elif event.button == 4:
                     print("You up")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x01\x0E") 
+                    ser.write(bytes.fromhex("57ab00050501000000010E"))
                 elif event.button == 5:
                     print("You down")
-                    print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x81\x9C") 
+                    ser.write(bytes.fromhex("57ab00050501000000ff0c"))
             elif event.type == pygame.MOUSEBUTTONUP:
-                print("\x57\xAB\x00\x05\x05\x01\x00\x00\x00\x00\x0D")
+                # print("57ab00050501000000000D")
+                ser.write(bytes.fromhex("57ab00050501000000000D"))
                 if event.button == 1:
                     print("You released the left mouse button")
                 elif event.button == 2:
@@ -75,31 +80,40 @@ def run_control():
         screen.blit(frame, (0,0))
         pygame.display.flip()
 
+        count = ser.inWaiting()
+        if count != 0:
+            recv = ser.read(count)
+            print(recv)  
+        ser.flushInput()
+
+        # ser.write(bytes.fromhex("57ab00050501020000000F"))
+        # ser.write(bytes.fromhex("57ab00050501000000000D"))
+
 def ch9329_msencode(x,y):
     # 
-    str_head = "\x57\xAB\x00\x04\x02\x00" 
+    str_head = "57AB0004070200" 
 
-    x = int(x*4096/1280)
-    y = int(y*4096/768)
+    x = int(x*4096/window_W)
+    y = int(y*4096/window_L)
 
-    x_str1 = chr(x&0xff) 
-    x_str2 = chr((x>>8)&0xff)
-    y_str1 = chr(y&0xff) 
-    y_str2 = chr((y>>8)&0xff) 
+    x_str1 = "%02x"%(x&0xff) 
+    x_str2 = "%02x"%((x>>8)&0xff)
+    y_str1 = "%02x"%(y&0xff) 
+    y_str2 = "%02x"%((y>>8)&0xff) 
 
     str_tail = 0x57+0xAB+4+7+2+ int(y&0xff) +  int((y>>8)&0xff) + int(x&0xff) +  int((x>>8)&0xff)
 
-    str = str_head + x_str1 +x_str2 + y_str1 + y_str2 + '\x00' + chr(str_tail&0xff)
-
+    str = str_head + x_str1 +x_str2 + y_str1 + y_str2 + '00' + "%02x"%(str_tail&0xff)
     return str
 
 
 def ch9329_kbencode(keyvalue,modvalue):
-    str_head = "\x57\xAB\x00\x02\x08" 
-    str_tail = chr((0x0C+keyvalue+modvalue)&0xff) 
-    mod = chr(modvalue) 
-    key = chr(keyvalue) 
-    str_a = str_head + mod + '\x00'  + key + '\x00\x00\x00\x00\x00'  + str_tail
+    str_head = "57AB000208" 
+    str_tail = "%02x"%((0x0C+keyvalue+modvalue)&0xff) 
+    mod = "%02x"%(modvalue) 
+    key = "%02x"%(keyvalue) 
+    str_a = str_head + '00' + '00'  + key + '0000000000'  + str_tail
+    # str_a = str_head + mod + '00'  + key + '0000000000'  + str_tail
 
     return str_a
 
@@ -218,8 +232,8 @@ def pygkey_to_code(key):
         pygame.K_KP_EQUALS  :'=',
         pygame.K_UP             :'up_arrow',    
         pygame.K_DOWN             :'down_arrow',
-        pygame.K_RIGHT            :'left_arrow',
-        pygame.K_LEFT              :'right_arrow',
+        pygame.K_RIGHT            :'right_arrow',
+        pygame.K_LEFT              :'left_arrow',
         pygame.K_INSERT              :'insert',
         pygame.K_HOME                :'home',
         pygame.K_END               :'end',
@@ -376,4 +390,13 @@ def pygkey_to_code(key):
 
     return key_map.get(keyvalue.get(key,0),0)
 
-run_control()
+if __name__ == '__main__':
+    try:
+        ser = serial.Serial('/dev/ttyAMA0', 9600)
+        if ser.isOpen == False:
+            ser.open()
+        #ser.write(bytes.fromhex("57ab00050501020000000F"))
+        main()
+    except KeyboardInterrupt:
+        if ser != None:
+            ser.close()
