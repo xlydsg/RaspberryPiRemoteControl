@@ -9,6 +9,9 @@ def check_button(button, mouse_x, mouse_y):
         if mouse_y > button.rect.top and mouse_y <= button.rect.bottom:
             button.stats = True
 
+def draw_button(screen, button_order):
+    pass
+
 def ch9329_kbencode(keyvalue,modvalue):
     """
     拼接串口需要发送的键盘按键数据包，支持最多8个控制按键和1个普通按键
@@ -19,10 +22,10 @@ def ch9329_kbencode(keyvalue,modvalue):
     """
     str_head = "57AB000208"
     str_tail = "%02x"%((0x0C+keyvalue+modvalue)&0xff)
-    # mod = "%02x"%(modvalue)
+    mod = "%02x"%(modvalue)
     key = "%02x"%(keyvalue)
-    str_a = str_head + '00' + '00'  + key + '0000000000'  + str_tail
-    # str_a = str_head + mod + '00'  + key + '0000000000'  + str_tail
+    # str_a = str_head + '00' + '00'  + key + '0000000000'  + str_tail
+    str_a = str_head + mod + '00'  + key + '0000000000'  + str_tail
 
     return str_a
 

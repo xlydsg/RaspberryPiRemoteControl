@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 import pygame
 import serial
-import copy
 
 import time
 from py_class.button import Button
@@ -48,7 +47,22 @@ def main():
 
     ### gui设置
     # 初始化按键
-    manager_button = Button(screen, 'Hello World', 32, keyvalue = 0x05, modvalue = 0x4c)
+    prop = {
+        'msg':'Ctrl+alt+delete',
+        'font_size':20,
+        'modvalue': 0x05,
+        'order': 1,
+        'keyvalue': 0x4c,
+    }
+    manager_button = Button(screen, prop)
+    prop = {
+        'msg':'Ctrl+Shift+Esc',
+        'font_size':20,
+        'order': 2,
+        'modvalue': 0x03,
+        'keyvalue': 0x29,
+    }
+    task_button = Button(screen, prop)
     ###
 
 
@@ -71,7 +85,7 @@ def main():
 
             # pygame检测到按键抬起
             elif event.type == pygame.KEYUP:
-                pass
+                print('KeyUp, transform: ' + str(bytes.fromhex("57AB00020800000000000000000C")))
                 # ser.write(bytes.fromhex("57AB00020800000000000000000C"))
                 # ser.write("57AB00020800000000000000000C" )
 
@@ -96,6 +110,11 @@ def main():
                     print(comb_kb_data)
                     # 需要将stats改为False以便下一次检测
                     manager_button.stats = False
+                ctrl_func.check_button(task_button, mouse_x, mouse_y)
+                if task_button.stats:
+                    comb_kb_data = ctrl_func.ch9329_kbencode(task_button.keyvalue, task_button.modvalue)
+                    print(comb_kb_data)
+
 
                 if event.button == 1:
                     print("You pressed the left mouse button")
@@ -127,11 +146,9 @@ def main():
                     print("You down")
         
         ### 交互界面相关操作
+        # 刷新按钮
         manager_button.draw_button()
-        # ctrl_func.check_button(manager_button.stats, manager_button, mouse_x, mouse_y)
-        # if manager_button.stats:
-        #     print("Hello World")
-        #     manager_button.stats = False
+        task_button.draw_button()
         ###
         
         ret, frame = camera.read()
